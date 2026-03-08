@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "semcache"
+version = "0.1.0"
+description = "Semantic caching for LLM calls"
+requires-python = ">=3.10"
+dependencies = [
+    "faiss-cpu",
+    "sentence-transformers",
+    "numpy",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["semcache*"]
