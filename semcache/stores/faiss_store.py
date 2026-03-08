@@ -37,7 +37,7 @@ class FaissVectorStore:
             vector_id: Stable integer ID (matches SQLite primary key).
             vector: L2-normalized float32 array of shape (dim,) or (1, dim).
         """
-        vec = vector.astype(np.float32).reshape(1, self._dim)
+        vec = np.ascontiguousarray(vector, dtype=np.float32).reshape(1, self._dim)
         ids = np.array([vector_id], dtype=np.int64)
         self._index.add_with_ids(vec, ids)
 
@@ -48,7 +48,7 @@ class FaissVectorStore:
             vector_ids: List of stable integer IDs.
             vectors: L2-normalized float32 array of shape (n, dim).
         """
-        vecs = vectors.astype(np.float32).reshape(len(vector_ids), self._dim)
+        vecs = np.ascontiguousarray(vectors, dtype=np.float32).reshape(len(vector_ids), self._dim)
         ids = np.array(vector_ids, dtype=np.int64)
         self._index.add_with_ids(vecs, ids)
 
@@ -82,7 +82,7 @@ class FaissVectorStore:
             return []
 
         k = min(k, self._index.ntotal)
-        vec = vector.astype(np.float32).reshape(1, self._dim)
+        vec = np.ascontiguousarray(vector, dtype=np.float32).reshape(1, self._dim)
         scores, ids = self._index.search(vec, k)
 
         results = []
