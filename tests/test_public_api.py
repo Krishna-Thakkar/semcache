@@ -34,6 +34,7 @@ def _make_semcache(tmp_path) -> SemCache:
         embedding_engine=StubEmbedding(vec),
     )
     sc.extract_question = False
+    sc.canonicalize_prompt = False
     return sc
 
 

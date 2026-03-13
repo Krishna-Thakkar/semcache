@@ -39,6 +39,7 @@ def _fixed_vec(seed: int = 0) -> np.ndarray:
 def _make_semcache(tmp_path, extract: bool = False, *vecs) -> SemCache:
     sc = SemCache.__new__(SemCache)
     sc.extract_question = extract
+    sc.canonicalize_prompt = False
     embedding = StubEmbedding(*vecs) if vecs else StubEmbedding(_fixed_vec(0))
     sc.cache_manager = CacheManager(
         metadata_store=MetadataStore(db_path=str(tmp_path / "meta.sqlite")),

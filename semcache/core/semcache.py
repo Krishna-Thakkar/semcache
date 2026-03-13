@@ -1,21 +1,29 @@
 from typing import Callable
 
 from semcache.core.cache_manager import CacheManager
+from semcache.utils.prompt_canonicalizer import canonicalize_prompt
 from semcache.utils.question_extractor import extract_question
 
 
 class SemCache:
     """User-facing API for the SemCache semantic caching library."""
 
-    def __init__(self, extract_question: bool = False):
+    def __init__(
+        self,
+        extract_question: bool = False,
+        canonicalize_prompt: bool = True,
+    ):
         self.cache_manager = CacheManager()
         self.extract_question = extract_question
+        self.canonicalize_prompt = canonicalize_prompt
 
     def ask(self, prompt: str, llm_fn: Callable[[str], str]) -> str:
         """Return a cached or freshly generated response for *prompt*.
 
-        If ``extract_question=True`` was set on construction, the prompt is
-        preprocessed to extract the question portion before cache lookup.
+        Pipeline applied before cache lookup:
+        1. extract_question (optional) — strip RAG context, keep question text
+        2. canonicalize_prompt (optional) — remove conversational filler
+        3. normalize_prompt — handled inside CacheManager
 
         Args:
             prompt: The user's input string.
@@ -26,6 +34,8 @@ class SemCache:
         """
         if self.extract_question:
             prompt = extract_question(prompt)
+        if self.canonicalize_prompt:
+            prompt = canonicalize_prompt(prompt)
         return self.cache_manager.query(prompt, llm_fn)
 
     def stats(self) -> dict:
