@@ -33,6 +33,7 @@ def _make_semcache(tmp_path) -> SemCache:
         vector_store=FaissVectorStore(storage_dir=str(tmp_path)),
         embedding_engine=StubEmbedding(vec),
     )
+    sc.extract_question = False
     return sc
 
 

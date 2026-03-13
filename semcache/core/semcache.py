@@ -1,16 +1,21 @@
 from typing import Callable
 
 from semcache.core.cache_manager import CacheManager
+from semcache.utils.question_extractor import extract_question
 
 
 class SemCache:
     """User-facing API for the SemCache semantic caching library."""
 
-    def __init__(self):
+    def __init__(self, extract_question: bool = False):
         self.cache_manager = CacheManager()
+        self.extract_question = extract_question
 
     def ask(self, prompt: str, llm_fn: Callable[[str], str]) -> str:
         """Return a cached or freshly generated response for *prompt*.
+
+        If ``extract_question=True`` was set on construction, the prompt is
+        preprocessed to extract the question portion before cache lookup.
 
         Args:
             prompt: The user's input string.
@@ -19,6 +24,8 @@ class SemCache:
         Returns:
             Cached response on hit, or the result of llm_fn on miss.
         """
+        if self.extract_question:
+            prompt = extract_question(prompt)
         return self.cache_manager.query(prompt, llm_fn)
 
     def stats(self) -> dict:
