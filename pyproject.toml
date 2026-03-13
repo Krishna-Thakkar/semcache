@@ -5,8 +5,12 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "semcache"
 version = "0.1.0"
-description = "Semantic caching for LLM calls"
+description = "Semantic caching for LLM calls to reduce cost and latency."
+authors = [{name = "Krishna Thakkar"}]
+license = {text = "MIT"}
+readme = "README.md"
 requires-python = ">=3.10"
+keywords = ["llm", "semantic-cache", "vector-search", "faiss"]
 dependencies = [
     "faiss-cpu",
     "sentence-transformers",
