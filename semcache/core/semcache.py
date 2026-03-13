@@ -1,26 +1,47 @@
-# Placeholder for Phase 8 implementation — SemCache public API
+from typing import Callable
+
+from semcache.core.cache_manager import CacheManager
 
 
 class SemCache:
-    """Public interface for the SemCache semantic caching library.
+    """User-facing API for the SemCache semantic caching library."""
 
-    Implementation coming in Phase 8.
-    """
+    def __init__(self):
+        self.cache_manager = CacheManager()
 
-    def __init__(
-        self,
-        storage_dir: str = ".semcache",
-        similarity_threshold: float = 0.85,
-        max_size: int = 1000,
-        embedding_model: str = "all-MiniLM-L6-v2",
-    ):
-        raise NotImplementedError("SemCache will be implemented in Phase 8.")
+    def ask(self, prompt: str, llm_fn: Callable[[str], str]) -> str:
+        """Return a cached or freshly generated response for *prompt*.
 
-    def ask(self, prompt: str, llm_fn) -> str:
-        raise NotImplementedError
+        Args:
+            prompt: The user's input string.
+            llm_fn: Callable that accepts a prompt and returns a response string.
 
-    def stats(self) -> None:
-        raise NotImplementedError
+        Returns:
+            Cached response on hit, or the result of llm_fn on miss.
+        """
+        return self.cache_manager.query(prompt, llm_fn)
+
+    def stats(self) -> dict:
+        """Return basic cache statistics.
+
+        Returns:
+            Dictionary containing 'entries': total number of cached responses.
+        """
+        return {
+            "entries": self.cache_manager.metadata_store.get_total_entries()
+        }
 
     def clear(self) -> None:
-        raise NotImplementedError
+        """Clear all cached data.
+
+        Resets the FAISS index, deletes all SQLite metadata rows,
+        and clears the in-memory prompt index.
+        """
+        ms = self.cache_manager.metadata_store
+        vs = self.cache_manager.vector_store
+
+        for entry in ms.get_lru_entries():
+            ms.delete_entry(entry["vector_id"])
+            vs.remove_vector(entry["vector_id"])
+
+        ms.prompt_index.clear()
