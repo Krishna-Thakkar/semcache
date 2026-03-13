@@ -44,8 +44,11 @@ class CacheManager:
         # Step 3 — generate embedding
         embedding = self.embedding_engine.embed(prompt)
 
-        # Step 4 & 5 — semantic search with threshold
-        results = self.vector_store.search(embedding, k=5)
+        # Step 4 & 5 — semantic search with threshold (skip if index empty)
+        if self.vector_store.total > 0:
+            results = self.vector_store.search(embedding, k=min(5, self.vector_store.total))
+        else:
+            results = []
         if results:
             best_id, best_score = results[0]
             if best_score >= SIMILARITY_THRESHOLD:
