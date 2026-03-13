@@ -10,10 +10,15 @@ class SemCache:
 
     def __init__(
         self,
+        semantic_threshold: float = 0.90,
+        top_k: int = 5,
         extract_question: bool = False,
         canonicalize_prompt: bool = True,
     ):
-        self.cache_manager = CacheManager()
+        self.cache_manager = CacheManager(
+            semantic_threshold=semantic_threshold,
+            top_k=top_k,
+        )
         self.extract_question = extract_question
         self.canonicalize_prompt = canonicalize_prompt
 

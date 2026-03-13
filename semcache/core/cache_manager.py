@@ -5,7 +5,8 @@ from semcache.stores.faiss_store import FaissVectorStore
 from semcache.stores.metadata_store import MetadataStore
 from semcache.utils.normalize import normalize_prompt
 
-SIMILARITY_THRESHOLD = 0.9
+DEFAULT_SIMILARITY_THRESHOLD = 0.9
+DEFAULT_TOP_K = 5
 
 
 class CacheManager:
@@ -18,10 +19,14 @@ class CacheManager:
         metadata_store: Optional[MetadataStore] = None,
         vector_store: Optional[FaissVectorStore] = None,
         embedding_engine: Optional[SentenceTransformerEmbedding] = None,
+        semantic_threshold: float = DEFAULT_SIMILARITY_THRESHOLD,
+        top_k: int = DEFAULT_TOP_K,
     ):
         self.metadata_store = metadata_store or MetadataStore()
         self.vector_store = vector_store or FaissVectorStore()
         self.embedding_engine = embedding_engine or SentenceTransformerEmbedding()
+        self.semantic_threshold = semantic_threshold
+        self.top_k = top_k
 
     def query(self, prompt: str, llm_fn: Callable[[str], str]) -> str:
         """Return a cached response for *prompt*, calling *llm_fn* on a miss.
@@ -46,12 +51,13 @@ class CacheManager:
 
         # Step 4 & 5 — semantic search with threshold (skip if index empty)
         if self.vector_store.total > 0:
-            results = self.vector_store.search(embedding, k=min(5, self.vector_store.total))
+            k = min(self.top_k, self.vector_store.total)
+            results = self.vector_store.search(embedding, k=k)
         else:
             results = []
         if results:
             best_id, best_score = results[0]
-            if best_score >= SIMILARITY_THRESHOLD:
+            if best_score >= self.semantic_threshold:
                 entry = self.metadata_store.get_entry(best_id)
                 if entry:
                     self.metadata_store.update_access_time(best_id)

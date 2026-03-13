@@ -7,7 +7,7 @@ precisely exercise exact-hit, semantic-hit, and miss paths.
 import numpy as np
 import pytest
 
-from semcache.core.cache_manager import CacheManager, SIMILARITY_THRESHOLD
+from semcache.core.cache_manager import CacheManager, DEFAULT_SIMILARITY_THRESHOLD
 from semcache.stores.faiss_store import FaissVectorStore
 from semcache.stores.metadata_store import MetadataStore
 
@@ -172,3 +172,72 @@ class TestMultipleQueries:
         manager.query("prompt alpha", fake_llm)
         manager.query("prompt beta", fake_llm)
         assert manager.metadata_store.get_total_entries() == 2
+
+
+# ---------------------------------------------------------------------------
+# Configurable semantic_threshold and top_k
+# ---------------------------------------------------------------------------
+
+def _make_manager_cfg(tmp_path, vectors, **kwargs) -> CacheManager:
+    return CacheManager(
+        metadata_store=MetadataStore(db_path=str(tmp_path / "meta.sqlite")),
+        vector_store=FaissVectorStore(storage_dir=str(tmp_path)),
+        embedding_engine=StubEmbedding(vectors),
+        **kwargs,
+    )
+
+
+class TestConfigurableParameters:
+    def test_default_threshold_stored(self, tmp_path):
+        m = _make_manager_cfg(tmp_path, [_fixed_vec(0)])
+        assert m.semantic_threshold == DEFAULT_SIMILARITY_THRESHOLD
+
+    def test_custom_threshold_stored(self, tmp_path):
+        m = _make_manager_cfg(tmp_path, [_fixed_vec(0)], semantic_threshold=0.5)
+        assert m.semantic_threshold == 0.5
+
+    def test_default_top_k_stored(self, tmp_path):
+        m = _make_manager_cfg(tmp_path, [_fixed_vec(0)])
+        assert m.top_k == 5
+
+    def test_custom_top_k_stored(self, tmp_path):
+        m = _make_manager_cfg(tmp_path, [_fixed_vec(0)], top_k=1)
+        assert m.top_k == 1
+
+    def test_low_threshold_causes_semantic_hit(self, tmp_path):
+        """With threshold=0.0 any vector is a semantic hit."""
+        v1 = _fixed_vec(60)
+        v2 = _fixed_vec(61)  # dissimilar — would miss at 0.9
+        manager = _make_manager_cfg(tmp_path, [v1, v2], semantic_threshold=0.0)
+        calls = []
+
+        def recording_llm(p):
+            calls.append(p)
+            return f"response:{p}"
+
+        manager.query("first prompt", recording_llm)
+        manager.query("second prompt", recording_llm)
+        assert len(calls) == 1  # second query hits via low threshold
+
+    def test_high_threshold_forces_miss(self, tmp_path):
+        """With threshold > 1.0 no similarity score can ever qualify."""
+        v1 = _fixed_vec(70)
+        v2 = _fixed_vec(71)
+        # threshold=2.0 is impossible — forces every query to be a miss
+        manager = _make_manager_cfg(tmp_path, [v1, v2], semantic_threshold=2.0)
+        calls = []
+
+        def recording_llm(p):
+            calls.append(p)
+            return f"response:{p}"
+
+        manager.query("first prompt", recording_llm)
+        manager.query("second prompt", recording_llm)
+        assert len(calls) == 2  # no score can reach 2.0 → both are misses
+
+    def test_top_k_one_still_returns_best(self, tmp_path):
+        vec = _fixed_vec(80)
+        manager = _make_manager_cfg(tmp_path, [vec, vec], top_k=1)
+        manager.query("store this", fake_llm)
+        results = manager.vector_store.search(vec, k=1)
+        assert len(results) == 1
